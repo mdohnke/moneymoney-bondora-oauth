@@ -76,8 +76,13 @@ function InitializeSession2(protocol, bankCode, step, credentials, interactive)
             "&redirect_uri=" .. MM.urlencode(REDIRECT_URI) ..
             "&code=" .. MM.urlencode(authorizationCode)
         local postContentType = "application/x-www-form-urlencoded"
-        local json = JSON(connection:request("POST", url .. "/oauth/access_token", postContent, postContentType)):dictionary()
+        local headers = {
+            ['Accept'] = "application/json"
+        }
+        local json = JSON(connection:request("POST", url .. "/oauth/access_token", postContent, postContentType, headers)):dictionary()
         -- Store access token and expiration date.
+        print("Access Token:" .. json["access_token"])
+        print("Expires in:" .. json["expires_in"])
         LocalStorage.accessToken = json["access_token"]
         LocalStorage.expiresAt = os.time() + json["expires_in"]
 
