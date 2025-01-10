@@ -85,6 +85,23 @@ function InitializeSession2(protocol, bankCode, step, credentials, interactive)
 
 end
 
+function ListAccounts(knownAccounts)
+    -- Return array of accounts.
+    local account = {
+        name = "Premium Account",
+        owner = "Jane Doe",
+        accountNumber = "111222333444",
+        bankCode = "80007777",
+        currency = "EUR",
+        type = AccountTypeGiro
+    }
+  return {account}
+end
+
+-- Refreshes the account and retrieves transactions
+function RefreshAccount(account, since)
+end
+
 function EndSession()
 end
 
