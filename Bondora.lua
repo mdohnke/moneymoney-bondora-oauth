@@ -8,7 +8,8 @@
 
 local BANK_CODE = "Bondora (OAuth2)"
 local REDIRECT_URI = "https://service.moneymoney-app.com/1/redirect"
-local SCOPE = "Investments"
+local SCOPE = "Investments ReportRead"
+local AUTH_URL = "https://app.bondora.com/oauth/authorize"
 
 WebBanking {
     version = 0.1,
@@ -23,14 +24,18 @@ local connection
 -- Set to true on initial setup to query all transactions
 local isInitialSetup = false
 
-local AUTH_URL = "https://app.bondora.com/oauth/authorize"
+-- Due to rate limiting of the Bondora API we reuse the account balance response
+local balanceResponse
+local balanceResponseTimestamp
+-- Time how long to "cache" the account balance response 
+local timeToHoldBalanceResponse = 300
+
+local clientId
+local clientSecret
 
 function SupportsBank(protocol, bankCode)
     return protocol == ProtocolWebBanking and bankCode == BANK_CODE
 end
-
-local clientId
-local clientSecret
 
 function InitializeSession2(protocol, bankCode, step, credentials, interactive)
     -- Bondora's authentication uses OAuth2 and want a redirect to their website
@@ -47,8 +52,17 @@ function InitializeSession2(protocol, bankCode, step, credentials, interactive)
         local authenticated = false
         if LocalStorage.accessToken and os.time() < LocalStorage.expiresAt then
             print("Validating access token.")
-            local balance = queryPrivate("api/v1/account/balance")
-            authenticated = balance and balance["success"]
+            print("Access Token: " .. LocalStorage.accessToken)
+            print("Expires at: " .. os.date("%m/%d/%Y %I:%M %p", LocalStorage.expiresAt))
+            local eventlog = queryPrivate("api/v1/eventlog")
+            if eventlog["Success"] == true then
+                authenticated = true
+                print("Authenticated!")
+            else
+                authenticated = false
+                print("Not authenticated!")
+            end
+            print("Authenticated? -> " .. string.format("%s", authenticated))
         end
 
         -- Obtain OAuth 2.0 authorization code from web browser.
@@ -81,34 +95,90 @@ function InitializeSession2(protocol, bankCode, step, credentials, interactive)
         }
         local json = JSON(connection:request("POST", url .. "/oauth/access_token", postContent, postContentType, headers)):dictionary()
         -- Store access token and expiration date.
-        print("Access Token:" .. json["access_token"])
-        print("Expires in:" .. json["expires_in"])
+        print("Access Token: " .. json["access_token"])
+        print("Expires in: " .. json["expires_in"])
         LocalStorage.accessToken = json["access_token"]
         LocalStorage.expiresAt = os.time() + json["expires_in"]
+        print("Expires at: " .. os.date("%m/%d/%Y %I:%M %p", LocalStorage.expiresAt))
 
     end
 
 end
 
 function ListAccounts(knownAccounts)
-    -- Return array of accounts.
-    local account = {
-        name = "Premium Account",
-        owner = "Jane Doe",
-        accountNumber = "111222333444",
-        bankCode = "80007777",
-        currency = "EUR",
-        type = AccountTypeGiro
-    }
-  return {account}
+    -- Fetch accounts from Bondora API
+    local accounts = GetBondoraAccounts()
+    return accounts
 end
 
 -- Refreshes the account and retrieves transactions
 function RefreshAccount(account, since)
+
+    print("Fetching balance for account: " .. account["accountNumber"])
+    local s = {}
+    -- Use already requested data
+    if balanceResponse ~= nil and balanceResponseTimestamp > os.time() then
+        for key, value in pairs(balanceResponse["Payload"]["GoGrowAccounts"]) do
+            if account["accountNumber"] == value["Name"] then
+                print("TotalSaved: " .. value["TotalSaved"] .. " -> " .. value["NetDeposits"])
+                table.insert(s, {
+                    name = "Account",
+                    quantity = 1,
+                    purchasePrice = value["NetDeposits"],
+                    price = value["TotalSaved"],
+                    currency = nil
+                })
+                
+            end
+        end
+    -- Refresh data
+    else
+        GetBondoraAccounts()
+        -- TODO: refactor!
+        for key, value in pairs(balanceResponse["Payload"]["GoGrowAccounts"]) do
+            if account["accountNumber"] == value["Name"] then
+                print("Total saved balance: " .. value["TotalSaved"] .. " -> " .. value["NetDeposits"])
+                table.insert(s, {
+                    name = "Account",
+                    quantity = 1,
+                    purchasePrice = value["NetDeposits"],
+                    price = value["TotalSaved"],
+                    currency = nil
+                })
+            end
+        end
+    end
+    return {securities = s}
 end
 
 function EndSession()
 end
+
+--
+-- Bondora API object handling 
+--
+function GetBondoraAccounts()
+    balanceResponse = queryPrivate("api/v1/account/balance")
+    local accounts = {}
+    if balanceResponse["Success"] then
+        for key, value in pairs(balanceResponse["Payload"]["GoGrowAccounts"]) do
+            table.insert(accounts, {
+                name = "Go&Grow - " .. value["Name"],
+                accountNumber = value["Name"],
+                currency = "EUR",
+                portfolio = true,
+                type = "AccountTypePortfolio"
+            })
+        end
+        balanceResponseTimestamp = os.time() + timeToHoldBalanceResponse
+    end
+    return accounts
+end
+
+
+-- 
+-- General functions
+--
 
 -- Builds the request for sending to Bondora API and unpacks
 -- the returned json object into a table

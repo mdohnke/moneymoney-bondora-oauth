@@ -6,17 +6,32 @@ This extension is inspired by
 * https://github.com/EmDee/moneymoney-bondora for Bondora API features
 
 ## Installation
+* Download the extension from the official extensions page
+* In MoneyMoney go to Help > Show database in finder (German: Hilfe > Datenbank im Finder zeigen)
+* Add the downloaded .lua file to the directory "Extensions"
+
 
 ## Usage
-* Add application in your Bondora API settings
+
+### Preparation: Create application in your Bondora API settings
+Create an application with the following values by navigating to api.bondora.com > Applications > Create New 
+* Application name must be unique. Choose something like "MoneyMoney - <YourName>" or whatever you want (this value is never used in the extension). You get an error message if any other user already used your chosen value.
+* Homepage URL: https://service.moneymoney-app.com/1/redirect
+* Application description: Choose some text to describe the access, i.e. "Access for MoneyMoney finance app"
+* Authorization callback URL: https://service.moneymoney-app.com/1/redirect 
+
+### Create Account in MoneyMoney
 * Add a new account and select 'Bondora Account (OAuth2)" in the 'Others' category.
-* Enter Client ID and Client Secret
+* Enter the following values from your API application settings: 
+    * Client ID as username 
+    * Client Secret as password
 
 The extension will show your account balance (Go&Grow, other Bondora products)
 TODO:
-* Add OAuth2 Authentication
+* Add OAuth2 Authentication, especially handling the refresh token
 * Add support for Go&Grow
 * Add support for other Bondora products
+* Handle http 429 error due to API rate limiting
 
 ## Limitation
 TODO: remove this limitation
