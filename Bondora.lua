@@ -131,7 +131,9 @@ end
 --
 function GetGoGrowAccounts()
     -- Fetch new data in respect to API rate limiting
-    if LocalStorage.balanceResponse ~= nil and LocalStorage.balanceResponseTimestamp < os.time() then
+    if LocalStorage.balanceResponse == nil then
+        LocalStorage.balanceResponse = queryPrivate("api/v1/account/balance")
+    elseif LocalStorage.balanceResponse ~= nil and LocalStorage.balanceResponseTimestamp < os.time() then
         print("Fetch new data")
         LocalStorage.balanceResponse = queryPrivate("api/v1/account/balance")
     end
