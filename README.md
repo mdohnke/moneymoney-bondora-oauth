@@ -11,7 +11,8 @@ The implementation is inspired by:
 * In MoneyMoney go to Help > Show database in finder (German: Hilfe > Datenbank im Finder zeigen)
 * Add the downloaded Bondora.lua file to the directory "Extensions"
 * Deactivate the signature check
-![moneymoney signature check](assets/moneymoney-deactivate-signature-check.png)
+  
+  <img src="assets/moneymoney-deactivate-signature-check.png" alt="moneymoney signature check" width="300">
 
 **Later**
 * Download the extension from the official [extensions page](https://moneymoney-app.com/extensions/)
