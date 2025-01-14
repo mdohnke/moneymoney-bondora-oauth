@@ -37,3 +37,8 @@ TODO: remove this limitation
 
 This extension will only work, if your English preferences for decimal and thousand separator are following the default setting:
 ![bondora decimal and thousand separator preferences](assets/bondora-preferences.png)
+
+
+## To clarify with MM Development
+* Is using LocalStorage with big data a problem (for the performance of MoneyMoney for example)?
+* Big http responses slow down the log file view. Is it possible to deactivate logging for specific http calls?
