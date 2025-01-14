@@ -19,18 +19,18 @@ Create an application with the following values by navigating to api.bondora.com
 * Homepage URL: https://service.moneymoney-app.com/1/redirect
 * Application description: Choose some text to describe the access, i.e. "Access for MoneyMoney finance app"
 * Authorization callback URL: https://service.moneymoney-app.com/1/redirect 
+![bondora create application](assets/bondora-create-application.png)
 
 ### Create Account in MoneyMoney
 * Add a new account and select 'Bondora Account (OAuth2)" in the 'Others' category.
 * Enter the following values from your API application settings: 
     * Client ID as username 
     * Client Secret as password
+![bondora application created](assets/bondora-application-settings.png)
 
 **TODO:**
-* Add OAuth2 Authentication, especially handling the refresh token
-* Add support for Go&Grow
-* Add support for other Bondora products
 * Handle http 429 error due to API rate limiting
+* Get caching to work (API rate limiting)
 
 ## Limitation
 TODO: remove this limitation
@@ -41,4 +41,5 @@ This extension will only work, if your English preferences for decimal and thous
 
 ## To clarify with MM Development
 * Is using LocalStorage with big data a problem (for the performance of MoneyMoney for example)?
+* Is the LocalStorage divided in spaces or are the variables available for all extenstions? 
 * Big http responses slow down the log file view. Is it possible to deactivate logging for specific http calls?

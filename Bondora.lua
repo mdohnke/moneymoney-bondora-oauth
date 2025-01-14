@@ -2,7 +2,6 @@
 --
 -- Copyright (c) 2025 Marco Dohnke
 
-
 -------------------------
 
 
@@ -105,78 +104,22 @@ function InitializeSession2(protocol, bankCode, step, credentials, interactive)
 end
 
 function ListAccounts(knownAccounts)
-    -- Fetch Portfolio Pro and other products
+    -- Fetch Go&Grow Accounts
     local accounts = GetGoGrowAccounts()
-
-    -- Fetch accounts from Bondora API
+    -- Fetch Portfolio Pro and other accounts
     table.insert(accounts, GetOtherBondoraAccounts())
-    RecPrint(accounts)
     return accounts
 end
 
 function RefreshAccount(account, since)
     local s = {}
-    -- Use already requested data
-    if LocalStorage.balanceResponse ~= nil and LocalStorage.balanceResponseTimestamp < os.time() then
-        print("Fetch new data")
-        GetGoGrowAccounts()        
-    end
+    
     if(account["accountNumber"] == "Go&Grow Accounts") then
         s = mergeTables(s,GetGoGrowBalance())
     end
     if(account["accountNumber"]== "Other Bondora Products") then
-        table.insert(s, GetOtherBondoraProductBalance())
+        s = mergeTables(s, GetOtherBondoraProductBalance())
     end
-    RecPrint(s)
-    return {securities = s}
-end
-
--- Refreshes the account and retrieves transactions
-function RefreshAccountOld(account, since)
--- TODO: check for account name first, if then else...
-
-    print("Fetching balance for account: " .. account["accountNumber"])
-    local s = {}
-
-    -- TODO: refactor!!! seems not to work at the moment
-    -- Use already requested data
-    if LocalStorage.balanceResponse ~= nil and LocalStorage.balanceResponseTimestamp > os.time() then
-        print("Using cached data")
-        for key, value in pairs(LocalStorage.balanceResponse["Payload"]["GoGrowAccounts"]) do
-            if account["accountNumber"] == value["Name"] then
-                table.insert(s, {
-                    name = "Account",
-                    quantity = 1,
-                    purchasePrice = value["NetDeposits"],
-                    price = value["TotalSaved"],
-                    currency = nil
-                })
-           
-            end
-        end
-    -- Refresh data
-    else
-        print("Fetch new data")
-        GetGoGrowAccounts()
-        for key, value in pairs(LocalStorage.balanceResponse["Payload"]["GoGrowAccounts"]) do
-            if account["accountNumber"] == value["Name"] then
-                table.insert(s, {
-                    name = "Account",
-                    quantity = 1,
-                    purchasePrice = value["NetDeposits"],
-                    price = value["TotalSaved"],
-                    currency = nil
-                })
-            end
-        end
-    end
-
-    -- Fetch non Go&Grow products
-    -- TODO: check if account name is "non Go&Grow"
-    if(account["accountNumber"]== "Other Bondora Products") then
-        table.insert(s, GetOtherBondoraProductItems())
-    end
-
     return {securities = s}
 end
 
@@ -187,7 +130,11 @@ end
 -- Bondora API object handling 
 --
 function GetGoGrowAccounts()
-    LocalStorage.balanceResponse = queryPrivate("api/v1/account/balance")
+    -- Fetch new data in respect to API rate limiting
+    if LocalStorage.balanceResponse ~= nil and LocalStorage.balanceResponseTimestamp < os.time() then
+        print("Fetch new data")
+        LocalStorage.balanceResponse = queryPrivate("api/v1/account/balance")
+    end
     local accounts = {}
     if LocalStorage.balanceResponse["Success"] then
         if LocalStorage.balanceResponse["Payload"]["GoGrowAccounts"] ~= nil then
@@ -199,16 +146,6 @@ function GetGoGrowAccounts()
                 type = "AccountTypePortfolio"
             })
         end
-
-        --for key, value in pairs(LocalStorage.balanceResponse["Payload"]["GoGrowAccounts"]) do
-        --    table.insert(accounts, {
-        --        name = "Go&Grow - " .. value["Name"],
-        --        accountNumber = value["Name"],
-        --        currency = "EUR",
-        --        portfolio = true,
-        --        type = "AccountTypePortfolio"
-        --    })
-        --end
         LocalStorage.balanceResponseTimestamp = os.time() + timeToHoldBalanceResponse
     end
     return accounts
@@ -229,17 +166,17 @@ function GetGoGrowBalance()
     return securites
 end
 
+-- Check if other Bondora products like Portfolio Pro / Portfolio Manager / API / Manual are used
 function GetOtherBondoraAccounts()
-    if (LocalStorage.investmentsResponse == nil) then
-        LocalStorage.investmentsResponse = queryPrivate("api/v1/account/investments")
+    if LocalStorage.investmentsResponse == nil then
+        LocalStorage.investmentsResponse = queryPrivate("api/v1/account/investments?LoanStatusCode=2&LoanStatusCode=5&LoanStatusCode=100")
     end
-
-    print("Number of investments: " .. LocalStorage.investmentsResponse["TotalCount"])
 
     -- If number of investments > 0 then other bondora products are used
     if LocalStorage.investmentsResponse["TotalCount"] > 0 then
+        LocalStorage.investmentsResponseTimestamp = os.time() + timeToHoldInvestmentResponse
         return {
-            name = "Other Bondora Products",
+            name = "Portfolio Pro etc.",
             accountNumber = "Other Bondora Products",
             currency = "EUR",
             portfolio = true,
@@ -251,31 +188,24 @@ function GetOtherBondoraAccounts()
     end
 end
 
--- Fetch account values for other Bondora products like Portfolio Pro / Portfolio Manager / API / Manual
--- Returns: table with 
+-- Fetch balance for other Bondora products like Portfolio Pro / Portfolio Manager / API / Manual
 function GetOtherBondoraProductBalance()
 
-    if LocalStorage.investmentsResponse["TotalCount"] == nil then
-
+    if LocalStorage.investmentsResponse ~= nil and LocalStorage.investmentsResponseTimestamp < os.time() then
         LocalStorage.investmentsResponse = queryPrivate("api/v1/account/investments?LoanStatusCode=2&LoanStatusCode=5&LoanStatusCode=100")
-        -- TODO: Set timestamps for caching
-        -- LocalStorage.investmentsResponseTimestamp = os.time() + timeToHoldInvestmentResponse
+        -- Set timestamp for caching
+        LocalStorage.investmentsResponseTimestamp = os.time() + timeToHoldInvestmentResponse
     end
-
-    local sumPrincipalRemaining = 0
-    local sumPrincipalLateAmount = 0
+    local s = {}
     for key, value in pairs(LocalStorage.investmentsResponse["Payload"]) do
-        sumPrincipalRemaining = sumPrincipalRemaining + value["PrincipalRemaining"]
-        sumPrincipalLateAmount = sumPrincipalLateAmount + value["PrincipalLateAmount"]
+        table.insert(s, {
+            name = value["InvestmentNumber"],
+            quantity = 1,
+            purchasePrice = value["PrincipalRemaining"],
+            price = value["PrincipalRemaining"]-value["PrincipalLateAmount"],
+            currency = nil,
+        })
     end
-
-    local s = {
-        name = "Other Bondora Products",
-        quantity = 1,
-        purchasePrice = sumPrincipalRemaining,
-        price = sumPrincipalRemaining-sumPrincipalLateAmount,
-        currency = nil,
-    }
 
     return s
 end
@@ -290,10 +220,10 @@ function queryPrivate(method, params)
     local path = string.format("/%s", method)
 
     if not (params == nil) then
-      local queryParams = httpBuildQuery(params)
-      if string.len(queryParams) > 0 then
-        path = path .. "?" .. queryParams
-      end
+        local queryParams = httpBuildQuery(params)
+        if string.len(queryParams) > 0 then
+            path = path .. "?" .. queryParams
+        end
     end
 
     local headers = {}
@@ -303,16 +233,16 @@ function queryPrivate(method, params)
     content = connection:request("GET", url .. path, nil, nil, headers)
 
     return JSON(content):dictionary()
-  end
+end
 
-  function httpBuildQuery(params)
+function httpBuildQuery(params)
     local str = ''
     for key, value in pairs(params) do
         str = str .. key .. "=" .. value .. "&"
     end
     str = str.sub(str, 1, -2)
     return str
-  end
+end
 
 function mergeTables(table1, table2)
 	for _, value in ipairs(table2) do
