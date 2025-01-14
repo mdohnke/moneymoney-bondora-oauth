@@ -7,6 +7,13 @@ The implementation is inspired by:
 * https://github.com/EmDee/moneymoney-bondora for Bondora API features
 
 ## Installation
+* Download the extension from this repository
+* In MoneyMoney go to Help > Show database in finder (German: Hilfe > Datenbank im Finder zeigen)
+* Add the downloaded Bondora.lua file to the directory "Extensions"
+* Deactivate the signature check
+![moneymoney signature check](assets/moneymoney-deactivate-signature-check.png)
+
+**Later**
 * Download the extension from the official [extensions page](https://moneymoney-app.com/extensions/)
 * In MoneyMoney go to Help > Show database in finder (German: Hilfe > Datenbank im Finder zeigen)
 * Add the downloaded Bondora.lua file to the directory "Extensions"
