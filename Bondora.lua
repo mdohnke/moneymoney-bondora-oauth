@@ -155,6 +155,14 @@ end
 
 -- Fetch account values for Bondora Go&Grow
 function GetGoGrowBalance()
+    -- Fetch new data in respect to API rate limiting
+    if LocalStorage.balanceResponse == nil then
+        print("Cache empty, fetch new data")
+        LocalStorage.balanceResponse = queryPrivate("api/v1/account/balance")
+    elseif LocalStorage.balanceResponse ~= nil and LocalStorage.balanceResponseTimestamp < os.time() then
+        print("Update cached data")
+        LocalStorage.balanceResponse = queryPrivate("api/v1/account/balance")
+    end
     local securites = {}
     for key, value in pairs(LocalStorage.balanceResponse["Payload"]["GoGrowAccounts"]) do
         table.insert(securites, {
@@ -171,6 +179,9 @@ end
 -- Check if other Bondora products like Portfolio Pro / Portfolio Manager / API / Manual are used
 function GetOtherBondoraAccounts()
     if LocalStorage.investmentsResponse == nil then
+        LocalStorage.investmentsResponse = queryPrivate("api/v1/account/investments?LoanStatusCode=2&LoanStatusCode=5&LoanStatusCode=100")
+    elseif LocalStorage.investmentsResponse ~= nil and LocalStorage.investmentsResponseTimestamp < os.time() then
+        print("Fetch new data")
         LocalStorage.investmentsResponse = queryPrivate("api/v1/account/investments?LoanStatusCode=2&LoanStatusCode=5&LoanStatusCode=100")
     end
 
