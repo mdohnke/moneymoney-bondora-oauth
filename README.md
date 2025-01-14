@@ -1,6 +1,6 @@
 # moneymoney-bondora-oauth
 MoneyMoney Extension for Bondora using the API and OAuth2.
-The extension will provide the balance of your Go&Grow accounts.
+The extension will provide the balance of your Go&Grow accounts and your other accounts (Portfolio Pro, Portfolio Manager, Manual investments, API investments).
 
 The implementation is inspired by:
 * https://github.com/diederich/moneymoney-monzo for handling OAuth2 in MoneyMoney
