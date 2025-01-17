@@ -51,3 +51,4 @@ This extension will only work, if your English preferences for decimal and thous
 * Is using LocalStorage with big data a problem (for the performance of MoneyMoney for example)?
 * Is the LocalStorage divided in spaces or are the variables available for all extenstions? 
 * Big http responses slow down the log file view. Is it possible to deactivate logging for specific http calls?
+* HTTP 429 is catched by MoneyMoney itself, access in the script seems not possible. Is there a way to handle this http response code?
