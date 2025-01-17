@@ -130,13 +130,7 @@ end
 -- Bondora API object handling 
 --
 function GetGoGrowAccounts()
-    -- Fetch new data in respect to API rate limiting
-    if LocalStorage.balanceResponse == nil then
-        LocalStorage.balanceResponse = queryPrivate("api/v1/account/balance")
-    elseif LocalStorage.balanceResponse ~= nil and LocalStorage.balanceResponseTimestamp < os.time() then
-        print("Fetch new data")
-        LocalStorage.balanceResponse = queryPrivate("api/v1/account/balance")
-    end
+    FetchOrUpdateGoAndGrowData()
     local accounts = {}
     if LocalStorage.balanceResponse["Success"] then
         if LocalStorage.balanceResponse["Payload"]["GoGrowAccounts"] ~= nil then
@@ -148,21 +142,13 @@ function GetGoGrowAccounts()
                 type = "AccountTypePortfolio"
             })
         end
-        LocalStorage.balanceResponseTimestamp = os.time() + timeToHoldBalanceResponse
     end
     return accounts
 end
 
 -- Fetch account values for Bondora Go&Grow
 function GetGoGrowBalance()
-    -- Fetch new data in respect to API rate limiting
-    if LocalStorage.balanceResponse == nil then
-        print("Cache empty, fetch new data")
-        LocalStorage.balanceResponse = queryPrivate("api/v1/account/balance")
-    elseif LocalStorage.balanceResponse ~= nil and LocalStorage.balanceResponseTimestamp < os.time() then
-        print("Update cached data")
-        LocalStorage.balanceResponse = queryPrivate("api/v1/account/balance")
-    end
+    FetchOrUpdateGoAndGrowData()
     local securites = {}
     for key, value in pairs(LocalStorage.balanceResponse["Payload"]["GoGrowAccounts"]) do
         table.insert(securites, {
@@ -178,16 +164,9 @@ end
 
 -- Check if other Bondora products like Portfolio Pro / Portfolio Manager / API / Manual are used
 function GetOtherBondoraAccounts()
-    if LocalStorage.investmentsResponse == nil then
-        LocalStorage.investmentsResponse = queryPrivate("api/v1/account/investments?LoanStatusCode=2&LoanStatusCode=5&LoanStatusCode=100")
-    elseif LocalStorage.investmentsResponse ~= nil and LocalStorage.investmentsResponseTimestamp < os.time() then
-        print("Fetch new data")
-        LocalStorage.investmentsResponse = queryPrivate("api/v1/account/investments?LoanStatusCode=2&LoanStatusCode=5&LoanStatusCode=100")
-    end
-
+    FetchOrUpdateInvestmentsData()
     -- If number of investments > 0 then other bondora products are used
     if LocalStorage.investmentsResponse["TotalCount"] > 0 then
-        LocalStorage.investmentsResponseTimestamp = os.time() + timeToHoldInvestmentResponse
         return {
             name = "Portfolio Pro etc.",
             accountNumber = "Other Bondora Products",
@@ -203,12 +182,7 @@ end
 
 -- Fetch balance for other Bondora products like Portfolio Pro / Portfolio Manager / API / Manual
 function GetOtherBondoraProductBalance()
-
-    if LocalStorage.investmentsResponse ~= nil and LocalStorage.investmentsResponseTimestamp < os.time() then
-        LocalStorage.investmentsResponse = queryPrivate("api/v1/account/investments?LoanStatusCode=2&LoanStatusCode=5&LoanStatusCode=100")
-        -- Set timestamp for caching
-        LocalStorage.investmentsResponseTimestamp = os.time() + timeToHoldInvestmentResponse
-    end
+    FetchOrUpdateInvestmentsData()
     local s = {}
     for key, value in pairs(LocalStorage.investmentsResponse["Payload"]) do
         table.insert(s, {
@@ -226,6 +200,38 @@ end
 -- 
 -- HTTP helpers
 --
+
+function FetchOrUpdateGoAndGrowData()
+    -- Fetch new data in respect to API rate limiting
+    if LocalStorage.balanceResponse == nil then
+        LocalStorage.balanceResponse = queryPrivate("api/v1/account/balance")
+        if LocalStorage.balanceResponse["Success"] then
+            LocalStorage.balanceResponseTimestamp = os.time() + timeToHoldBalanceResponse
+        end
+    elseif LocalStorage.balanceResponse ~= nil and LocalStorage.balanceResponseTimestamp < os.time() then
+        LocalStorage.balanceResponse = queryPrivate("api/v1/account/balance")
+        if LocalStorage.balanceResponse["Success"] then
+            LocalStorage.balanceResponseTimestamp = os.time() + timeToHoldBalanceResponse
+        end
+    end
+    print("Balance Cache will be invalidated in " .. LocalStorage.balanceResponseTimestamp-os.time() .. " seconds.")
+end
+
+function FetchOrUpdateInvestmentsData()
+    if LocalStorage.investmentsResponse == nil then
+        LocalStorage.investmentsResponse = queryPrivate("api/v1/account/investments?LoanStatusCode=2&LoanStatusCode=5&LoanStatusCode=100")
+        if LocalStorage.investmentsResponse["Success"] then
+            LocalStorage.investmentsResponseTimestamp = os.time() + timeToHoldInvestmentResponse
+        end
+    elseif LocalStorage.investmentsResponse ~= nil and LocalStorage.investmentsResponseTimestamp < os.time() then
+        LocalStorage.investmentsResponse = queryPrivate("api/v1/account/investments?LoanStatusCode=2&LoanStatusCode=5&LoanStatusCode=100")
+        if LocalStorage.investmentsResponse["Success"] then
+            LocalStorage.investmentsResponseTimestamp = os.time() + timeToHoldInvestmentResponse
+        end
+    end
+    print("Investments Cache will be invalidated in " .. LocalStorage.investmentsResponseTimestamp-os.time() .. " seconds.")
+
+end
 
 -- Builds the request for sending to Bondora API and unpacks
 -- the returned json object into a table
