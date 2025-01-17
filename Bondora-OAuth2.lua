@@ -2,6 +2,24 @@
 --
 -- Copyright (c) 2025 Marco Dohnke
 
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this software and associated documentation files (the "Software"), to deal
+-- in the Software without restriction, including without limitation the rights
+-- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+-- copies of the Software, and to permit persons to whom the Software is
+-- furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in all
+-- copies or substantial portions of the Software.
+--
+-- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+-- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+-- SOFTWARE.
+
 -------------------------
 
 
@@ -11,7 +29,7 @@ local SCOPE = "Investments ReportRead"
 local AUTH_URL = "https://app.bondora.com/oauth/authorize"
 
 WebBanking {
-    version = 0.1,
+    version = 1.0,
     url = "https://api.bondora.com",
     services = {BANK_CODE},
     description = string.format(MM.localizeText("Bondora Account"), BANK_CODE),
@@ -49,18 +67,16 @@ function InitializeSession2(protocol, bankCode, step, credentials, interactive)
         -- Check if access token is still valid
         local authenticated = false
         if LocalStorage.accessToken and os.time() < LocalStorage.expiresAt then
-            print("Validating access token.")
-            print("Access Token: " .. LocalStorage.accessToken)
-            print("Expires at: " .. os.date("%m/%d/%Y %I:%M %p", LocalStorage.expiresAt))
+            -- print("Validating access token.")
+            -- print("Access Token: " .. LocalStorage.accessToken)
+            -- print("Expires at: " .. os.date("%m/%d/%Y %I:%M %p", LocalStorage.expiresAt))
             local eventlog = queryPrivate("api/v1/eventlog")
             if eventlog["Success"] == true then
                 authenticated = true
-                print("Authenticated!")
             else
                 authenticated = false
-                print("Not authenticated!")
             end
-            print("Authenticated? -> " .. string.format("%s", authenticated))
+            -- print("Authenticated? -> " .. string.format("%s", authenticated))
         end
 
         -- Obtain OAuth 2.0 authorization code from web browser.
@@ -98,7 +114,6 @@ function InitializeSession2(protocol, bankCode, step, credentials, interactive)
         LocalStorage.accessToken = json["access_token"]
         LocalStorage.expiresAt = os.time() + json["expires_in"]
         print("Expires at: " .. os.date("%m/%d/%Y %I:%M %p", LocalStorage.expiresAt))
-
     end
 
 end
@@ -214,7 +229,7 @@ function FetchOrUpdateGoAndGrowData()
             LocalStorage.balanceResponseTimestamp = os.time() + timeToHoldBalanceResponse
         end
     end
-    print("Balance Cache will be invalidated in " .. LocalStorage.balanceResponseTimestamp-os.time() .. " seconds.")
+    -- print("Balance Cache will be invalidated in " .. LocalStorage.balanceResponseTimestamp-os.time() .. " seconds.")
 end
 
 function FetchOrUpdateInvestmentsData()
@@ -229,7 +244,7 @@ function FetchOrUpdateInvestmentsData()
             LocalStorage.investmentsResponseTimestamp = os.time() + timeToHoldInvestmentResponse
         end
     end
-    print("Investments Cache will be invalidated in " .. LocalStorage.investmentsResponseTimestamp-os.time() .. " seconds.")
+    -- print("Investments Cache will be invalidated in " .. LocalStorage.investmentsResponseTimestamp-os.time() .. " seconds.")
 
 end
 

@@ -7,17 +7,18 @@ The implementation is inspired by:
 * https://github.com/EmDee/moneymoney-bondora for Bondora API features
 
 ## Installation
+### Signed Version
+* Download the extension from the official [extensions page](https://moneymoney-app.com/extensions/)
+* In MoneyMoney go to Help > Show database in finder (German: Hilfe > Datenbank im Finder zeigen)
+* Add the downloaded Bondora-OAuth2.lua file to the directory "Extensions"
+
+### Unsigned Version
 * Download the extension from this repository
 * In MoneyMoney go to Help > Show database in finder (German: Hilfe > Datenbank im Finder zeigen)
-* Add the downloaded Bondora.lua file to the directory "Extensions"
+* Add the downloaded Bondora-OAuth2.lua file to the directory "Extensions"
 * Deactivate the signature check
   
   <img src="assets/moneymoney-deactivate-signature-check.png" alt="moneymoney signature check" width="300">
-
-**Later**
-* Download the extension from the official [extensions page](https://moneymoney-app.com/extensions/)
-* In MoneyMoney go to Help > Show database in finder (German: Hilfe > Datenbank im Finder zeigen)
-* Add the downloaded Bondora.lua file to the directory "Extensions"
 
 ## Usage
 
@@ -36,19 +37,18 @@ Create an application with the following values by navigating to api.bondora.com
     * Client Secret as password
 ![bondora application created](assets/bondora-application-settings.png)
 
-**TODO:**
-* Handle http 429 error due to API rate limiting
-* Get caching to work (API rate limiting)
-
-## Limitation
+## Limitations
 TODO: remove this limitation
-
+### Bondora Preferences
 This extension will only work, if your English preferences for decimal and thousand separator are following the default setting:
 ![bondora decimal and thousand separator preferences](assets/bondora-preferences.png)
 
+### API Rate Limiting
+Bondora has an API rate limiting so there is a 429 http error response if the API is called too often.
+To work around this, the extension caches the response. But in general the 429 error is not yet handled in the code.
+Especially the response of the investments endpoint is quite large. So storing this in the LocalStorage should be optimized.
+TODO: Optimizing storing investments response (in LocalStorage)
 
-## To clarify with MM Development
+## To clarify with MoneyMoney development team
 * Is using LocalStorage with big data a problem (for the performance of MoneyMoney for example)?
-* Is the LocalStorage divided in spaces or are the variables available for all extenstions? 
-* Big http responses slow down the log file view. Is it possible to deactivate logging for specific http calls?
 * HTTP 429 is catched by MoneyMoney itself, access in the script seems not possible. Is there a way to handle this http response code?
