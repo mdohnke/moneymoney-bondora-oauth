@@ -64,7 +64,7 @@ function InitializeSession2(protocol, bankCode, step, credentials, interactive)
         -- Create HTTPS connection object.
         connection = Connection()
 
-        -- Check if access token is still valid
+        -- Check if access token is still valid or can be refreshed
         local authenticated = false
         if LocalStorage.accessToken and os.time() < LocalStorage.expiresAt then
             -- print("Validating access token.")
@@ -77,6 +77,26 @@ function InitializeSession2(protocol, bankCode, step, credentials, interactive)
                 authenticated = false
             end
             -- print("Authenticated? -> " .. string.format("%s", authenticated))
+        elseif LocalStorage.refreshToken ~= nil then
+            -- Refresh Access token
+            print("Access token expired, try to refresh the access token")
+            print("Token expired at: " .. os.date("%m/%d/%Y %I:%M %p", LocalStorage.expiresAt))
+            local postContent = "grant_type=refresh_token" .. 
+            "&client_id=" .. MM.urlencode(clientId) .. 
+            "&client_secret=" .. MM.urlencode(clientSecret) .. 
+            "&refresh_token=" .. MM.urlencode(LocalStorage.refreshToken) .. 
+            "&redirect_uri=" .. MM.urlencode(REDIRECT_URI)
+            local postContentType = "application/x-www-form-urlencoded"
+            local headers = {
+                ['Accept'] = "application/json"
+            }
+            local json = JSON(connection:request("POST", url .. "/oauth/access_token", postContent, postContentType, headers)):dictionary()
+            print("Access Token: " .. json["access_token"])
+            print("Expires in: " .. json["expires_in"])
+            LocalStorage.accessToken = json["access_token"]
+            LocalStorage.expiresAt = os.time() + json["expires_in"]
+            print("Expires at: " .. os.date("%m/%d/%Y %I:%M %p", LocalStorage.expiresAt))
+            authenticated = true
         end
 
         -- Obtain OAuth 2.0 authorization code from web browser.
@@ -108,10 +128,11 @@ function InitializeSession2(protocol, bankCode, step, credentials, interactive)
             ['Accept'] = "application/json"
         }
         local json = JSON(connection:request("POST", url .. "/oauth/access_token", postContent, postContentType, headers)):dictionary()
-        -- Store access token and expiration date.
+        -- Store access token, refresh token and expiration date.
         print("Access Token: " .. json["access_token"])
         print("Expires in: " .. json["expires_in"])
         LocalStorage.accessToken = json["access_token"]
+        LocalStorage.refreshToken = json["refresh_token"]
         LocalStorage.expiresAt = os.time() + json["expires_in"]
         print("Expires at: " .. os.date("%m/%d/%Y %I:%M %p", LocalStorage.expiresAt))
     end
@@ -217,35 +238,39 @@ end
 --
 
 function FetchOrUpdateGoAndGrowData()
-    -- Fetch new data in respect to API rate limiting
-    if LocalStorage.balanceResponse == nil then
-        LocalStorage.balanceResponse = queryPrivate("api/v1/account/balance")
-        if LocalStorage.balanceResponse["Success"] then
-            LocalStorage.balanceResponseTimestamp = os.time() + timeToHoldBalanceResponse
-        end
-    elseif LocalStorage.balanceResponse ~= nil and LocalStorage.balanceResponseTimestamp < os.time() then
+    -- Helper function to fetch and update the balance response
+    local function updateBalanceResponse()
         LocalStorage.balanceResponse = queryPrivate("api/v1/account/balance")
         if LocalStorage.balanceResponse["Success"] then
             LocalStorage.balanceResponseTimestamp = os.time() + timeToHoldBalanceResponse
         end
     end
-    -- print("Balance Cache will be invalidated in " .. LocalStorage.balanceResponseTimestamp-os.time() .. " seconds.")
+
+    -- Check if balance data needs to be fetched or updated
+    if not LocalStorage.balanceResponse or LocalStorage.balanceResponseTimestamp < os.time() then
+        updateBalanceResponse()
+    end
+
+    -- Uncomment the line below for debugging
+    -- print("Balance Cache will be invalidated in " .. (LocalStorage.balanceResponseTimestamp - os.time()) .. " seconds.")
 end
 
 function FetchOrUpdateInvestmentsData()
-    if LocalStorage.investmentsResponse == nil then
-        LocalStorage.investmentsResponse = queryPrivate("api/v1/account/investments?LoanStatusCode=2&LoanStatusCode=5&LoanStatusCode=100")
-        if LocalStorage.investmentsResponse["Success"] then
-            LocalStorage.investmentsResponseTimestamp = os.time() + timeToHoldInvestmentResponse
-        end
-    elseif LocalStorage.investmentsResponse ~= nil and LocalStorage.investmentsResponseTimestamp < os.time() then
+    -- Helper function to fetch and update the investments response
+    local function updateInvestmentsResponse()
         LocalStorage.investmentsResponse = queryPrivate("api/v1/account/investments?LoanStatusCode=2&LoanStatusCode=5&LoanStatusCode=100")
         if LocalStorage.investmentsResponse["Success"] then
             LocalStorage.investmentsResponseTimestamp = os.time() + timeToHoldInvestmentResponse
         end
     end
-    -- print("Investments Cache will be invalidated in " .. LocalStorage.investmentsResponseTimestamp-os.time() .. " seconds.")
 
+    -- Check if balance data needs to be fetched or updated
+    if not LocalStorage.investmentsResponse or LocalStorage.investmentsResponseTimestamp < os.time() then
+        updateInvestmentsResponse()
+    end
+
+    -- Uncomment the line below for debugging
+    -- print("Balance Cache will be invalidated in " .. (LocalStorage.balanceResponseTimestamp - os.time()) .. " seconds.")
 end
 
 -- Builds the request for sending to Bondora API and unpacks

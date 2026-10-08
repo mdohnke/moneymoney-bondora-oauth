@@ -1,2 +1,4 @@
 ### macOS ###
 .DS_Store
+# Local API sample data (contains personal financial data)
+/data/
